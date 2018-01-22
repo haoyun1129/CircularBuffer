@@ -3,7 +3,9 @@ package com.haoyun;
 import com.sun.deploy.util.ArrayUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class CircularBufferTest {
     @Test
@@ -58,5 +60,65 @@ class CircularBufferTest {
         buffer.add(testData);
         System.out.println(buffer);
         assertEquals(64, buffer.available());
+    }
+
+    @Test
+    void testAddGet() {
+        byte[] addData, getData;
+        CircularBuffer buffer = new CircularBuffer(64);
+        addData = generateBytes(0, 64);
+        buffer.add(addData);
+        getData = new byte[64];
+        buffer.get(getData);
+        assertArrayEquals(addData, getData);
+    }
+
+    @Test void testAddGetUnderrun() {
+        byte[] addData, getData;
+        CircularBuffer buffer = new CircularBuffer(64);
+        addData = generateBytes(0, 32);
+        buffer.add(addData);
+        getData = new byte[64];
+
+        boolean result = buffer.get(getData);
+        assertFalse(result);
+        assertArrayEquals(generateZeroBytes(64), getData);
+    }
+
+    @Test void testAddGetExceedEndOfBuffer() {
+        byte[] addData, getData, exceptedData;
+        boolean result;
+        CircularBuffer buffer = new CircularBuffer(64);
+        addData = generateBytes(0, 10);
+        buffer.add(addData);
+        getData = new byte[10];
+        result = buffer.get(getData);
+        System.out.println("after get 10: " + buffer);
+        assertTrue(result);
+        exceptedData = generateBytes(0, 10);
+        assertArrayEquals(exceptedData, getData);
+
+        buffer.add(generateBytes(0, 64));
+        System.out.println("after add 64: " + buffer);
+        assertEquals(64, buffer.available());
+        getData = new byte[64];
+        result = buffer.get(getData);
+        assertTrue(result);
+        exceptedData = generateBytes(0, 64);
+        assertArrayEquals(exceptedData, getData);
+    }
+
+    byte[] generateBytes(int start, int length) {
+        byte[] bytes = new byte[length];
+        for (int i = 0; i < length; i ++) {
+            bytes[i] = (byte) (i + start);
+        }
+        return bytes;
+    }
+
+    byte[] generateZeroBytes(int length) {
+        byte[] bytes = new byte[length];
+        Arrays.fill(bytes, (byte) 0);
+        return bytes;
     }
 }

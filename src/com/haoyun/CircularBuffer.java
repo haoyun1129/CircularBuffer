@@ -2,6 +2,7 @@ package com.haoyun;
 
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
+import java.util.Arrays;
 
 public class CircularBuffer {
 
@@ -14,7 +15,7 @@ public class CircularBuffer {
     private int overrun, underrun;
 
     public CircularBuffer(int n) {
-        buffer = new byte[n];
+        buffer = new byte[n + 1];
         tail = 0;
         head = 0;
     }
@@ -33,9 +34,8 @@ public class CircularBuffer {
     public void add(byte[] toAdd) {
         synchronized (buffer) {
             if (toAdd.length > buffer.length) {
-                overrun++;
                 throw new BufferOverflowException();
-            } else if (head + toAdd.length < buffer.length) {
+            } else if (head + toAdd.length <= buffer.length) {
                 // Not exceed end of buffer
                 System.arraycopy(toAdd, 0, buffer, head, toAdd.length);
                 if (head < tail && head + toAdd.length >= tail) {
@@ -85,25 +85,51 @@ public class CircularBuffer {
         }
     }
 
-    public void get(byte[] data) {
+    public boolean get(byte[] data) {
         synchronized (buffer) {
-
+            if (tail + data.length <= buffer.length) {
+                if (tail + data.length <= head) {
+                    // Normal
+                    System.arraycopy(buffer, tail, data, 0, data.length);
+                    tail = tail + data.length;
+                    return true;
+                } else {
+                    // Underrun
+                    underrun++;
+                    return false;
+                }
+            } else {
+                // Exceed end of buffer
+                int newTail = (tail + data.length) % buffer.length;
+                if (tail <= head) {
+                    underrun++;
+                    return false;
+                } else if (tail > head && newTail > (head + 1)) {
+                    underrun++;
+                    return false;
+                } else {
+                    System.arraycopy(buffer, tail, data, 0, buffer.length - tail);
+                    System.arraycopy(buffer, 0, data, buffer.length - tail, newTail);
+                    tail = newTail;
+                    return true;
+                }
+            }
         }
     }
 
     public String toString() {
-        return "com.haoyun.CircularBuffer(size=" + buffer.length + ", head=" + head + ", tail=" + tail + ", available=" + available() + ", overrun=" + overrun + ", underrun=" + underrun + ")";
+        return "com.haoyun.CircularBuffer(size=" + size() + ", head=" + head + ", tail=" + tail + ", available=" + available() + ", overrun=" + overrun + ", underrun=" + underrun + ")";
     }
 
     public int size() {
-        return buffer.length;
+        return buffer.length - 1;
     }
 
     public int available() {
         if (head >= tail) {
             return head - tail;
         } else {
-            return head + (buffer.length - tail) + 1;
+            return head + (buffer.length - tail);
         }
     }
 
