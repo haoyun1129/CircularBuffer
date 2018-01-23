@@ -89,6 +89,8 @@ class CircularBufferTest {
         byte[] addData, getData, exceptedData;
         boolean result;
         CircularBuffer buffer = new CircularBuffer(64);
+
+
         addData = generateBytes(0, 10);
         buffer.add(addData);
         getData = new byte[10];
@@ -108,7 +110,83 @@ class CircularBufferTest {
         assertArrayEquals(exceptedData, getData);
     }
 
-    byte[] generateBytes(int start, int length) {
+    @Test
+    void testAddGetRandom1() {
+        byte[] addData, getData, exceptedData;
+        boolean result;
+        CircularBuffer buffer = new CircularBuffer(64);
+
+        buffer.add(generateBytes(0, 10));
+        buffer.add(generateBytes(10, 10));
+        buffer.add(generateBytes(20, 10));
+        buffer.add(generateBytes(30, 10));
+        buffer.add(generateBytes(40, 10));
+        buffer.add(generateBytes(50, 10));
+
+        getData = new byte[60];
+        buffer.get(getData);
+        exceptedData = generateBytes(0, 60);
+        assertArrayEquals(exceptedData, getData);
+
+        buffer.add(generateBytes(0, 64));
+        getData = new byte[64];
+        buffer.get(getData);
+        exceptedData = generateBytes(0, 64);
+        assertArrayEquals(exceptedData, getData);
+
+        buffer.add(generateBytes(0, 32));
+        buffer.add(generateBytes(32, 32));
+        getData = new byte[32];
+        buffer.get(getData);
+        exceptedData = generateBytes(0, 32);
+        assertArrayEquals(exceptedData, getData);
+        buffer.get(getData);
+        exceptedData = generateBytes(32, 32);
+        assertArrayEquals(exceptedData, getData);
+    }
+
+    @Test
+    void testOverrunAndGetLatest() {
+        byte[] addData, getData, exceptedData;
+        boolean result;
+        CircularBuffer buffer = new CircularBuffer(64);
+
+        buffer.add(generateBytes(0, 50));
+        buffer.add(generateBytes(50,50));
+        buffer.add(generateBytes(100,50));
+        buffer.add(generateBytes(150,50));
+        buffer.add(generateBytes(200,56));
+
+        getData = new byte[64];
+        buffer.get(getData);
+        exceptedData = generateBytes(192, 64);
+        assertArrayEquals(exceptedData, getData);
+    }
+
+    @Test
+    void testUnderrunGetEmpty() {
+        byte[] addData, getData, exceptedData;
+        boolean result;
+        CircularBuffer buffer = new CircularBuffer(64);
+
+        buffer.add(generateBytes(0, 50));
+        getData = new byte[64];
+        buffer.get(getData);
+        exceptedData = generateZeroBytes(64);
+        assertArrayEquals(exceptedData, getData);
+
+        getData = new byte[51];
+        buffer.get(getData);
+        exceptedData = generateZeroBytes(51);
+        assertArrayEquals(exceptedData, getData);
+
+        getData = new byte[50];
+        buffer.get(getData);
+        exceptedData = generateBytes(0, 50);
+        assertArrayEquals(exceptedData, getData);
+    }
+
+    private byte[] generateBytes(int start, int length) {
         byte[] bytes = new byte[length];
         for (int i = 0; i < length; i ++) {
             bytes[i] = (byte) (i + start);
@@ -116,7 +194,7 @@ class CircularBufferTest {
         return bytes;
     }
 
-    byte[] generateZeroBytes(int length) {
+    private byte[] generateZeroBytes(int length) {
         byte[] bytes = new byte[length];
         Arrays.fill(bytes, (byte) 0);
         return bytes;
